@@ -1,0 +1,13 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
+
+## [1.0.0] - 2026-03-28
+
+### Added
+* Initial release of the Markdown Code Extractor.
+* Graphical User Interface with Drag and Drop support.
+* Background threading for responsive UI during extraction.

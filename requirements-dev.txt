@@ -1,0 +1,6 @@
+flake8
+autopep8
+pytest
+pytest-mock
+pre_commit
+pyinstaller
