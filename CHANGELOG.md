@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-05-02
+### Added
+*   **Dry Run Preview**: Added a "Preview" button that logs intended file changes without modifying any local files.
+*   **Directory History**: Implemented a `history.json` system to remember and suggest previously used project root directories.
+*   **Root Selector Combobox**: Replaced the standard entry field with a `CTkComboBox` for quick access to project history.
+*   **Folder Quick-Access**: Added an "Open Folder" button to immediately jump to the project root in the OS file explorer.
+### Changed
+*   **Extraction Workflow**: Disabled automatic extraction upon file drop to prevent accidental overwrites; the tool now waits for an explicit "Apply" or "Preview" command.
+*   **UI Layout**: Increased default window height to accommodate the new history and control elements.
+*   **Cleaner Logging**: Updated the log output to distinguish between previewing and active extraction modes.
+### Fixed
+*   **Release Note Bloat**: Updated the GitHub Actions workflow to surgically extract only the current version's notes from the changelog for release bodies, rather than uploading the entire file.
+*   **Path Normalization**: Improved path handling for drag-and-drop events to ensure consistent formatting across different operating systems.
+
 ## [1.3.0] - 2026-05-02
 ### Added
 * **Dynamic File Extraction**: Introduced the `extract_filename` function to dynamically identify target file paths from diverse markdown structures, including explicit boundaries, numbered headings, and bold text notations.

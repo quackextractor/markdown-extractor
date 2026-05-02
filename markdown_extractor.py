@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import json
 import subprocess
 import threading
 import tkinter as tk
@@ -99,9 +100,29 @@ class MarkdownExtractorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Code Extractor GUI")
-        self.root.geometry("700x700")
+        self.root.geometry("700x750")
+
+        self.history_path = "history.json"
+        self.history = self.load_history()
 
         self.setup_ui()
+
+    def load_history(self):
+        if os.path.exists(self.history_path):
+            try:
+                with open(self.history_path, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except Exception:
+                return {}
+        return {}
+
+    def save_history(self, dir_path):
+        self.history[dir_path] = True
+        try:
+            with open(self.history_path, "w", encoding="utf-8") as f:
+                json.dump(self.history, f)
+        except Exception as e:
+            print(f"Failed to save history: {e}")
 
     def setup_ui(self):
         self.main_frame = ctk.CTkFrame(self.root)
@@ -118,8 +139,8 @@ class MarkdownExtractorApp:
         root_frame = ctk.CTkFrame(content, fg_color="transparent")
         root_frame.pack(fill=tk.X, pady=(0, 15))
 
-        self.root_entry = ctk.CTkEntry(root_frame, textvariable=self.root_var)
-        self.root_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        self.root_combo = ctk.CTkComboBox(root_frame, variable=self.root_var, values=list(self.history.keys()))
+        self.root_combo.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
 
         ctk.CTkButton(root_frame, text="Browse", width=70, command=self.browse_root).pack(side=tk.LEFT, padx=(0, 5))
         ctk.CTkButton(root_frame, text="Open Folder", width=90, fg_color="#455A64", hover_color="#37474F", command=self.open_root_folder).pack(side=tk.LEFT)
@@ -143,14 +164,14 @@ class MarkdownExtractorApp:
         self.text_input = ctk.CTkTextbox(content, height=120)
         self.text_input.pack(fill=tk.X, pady=(0, 15))
 
-        # Bind paste events to the textbox specifically
+        # Bind paste events
         self.text_input.bind('<Control-v>', self.handle_paste_event)
         self.text_input.bind('<Command-v>', self.handle_paste_event)
 
         # Register Drag and Drop
         if TkinterDnD:
-            self.root_entry.drop_target_register(DND_FILES)
-            self.root_entry.dnd_bind('<<Drop>>', self.handle_root_drop)
+            self.root_combo.drop_target_register(DND_FILES)
+            self.root_combo.dnd_bind('<<Drop>>', self.handle_root_drop)
 
             self.md_entry.drop_target_register(DND_FILES)
             self.md_entry.dnd_bind('<<Drop>>', self.handle_md_drop)
@@ -160,12 +181,13 @@ class MarkdownExtractorApp:
         btn_frame.pack(fill=tk.X, pady=(5, 10))
 
         ctk.CTkButton(btn_frame, text="Apply Changes", width=140, height=35, command=self.start_extraction).pack(side=tk.RIGHT)
+        ctk.CTkButton(btn_frame, text="Preview", width=140, height=35, fg_color="#607D8B", hover_color="#455A64", command=self.start_preview).pack(side=tk.RIGHT, padx=5)
 
         self.progress = ctk.CTkProgressBar(content, mode="indeterminate")
         self.progress.pack(fill=tk.X, pady=(5, 10))
         self.progress.set(0)
 
-        self.log_text = ctk.CTkTextbox(content, state=tk.DISABLED, height=150)
+        self.log_text = ctk.CTkTextbox(content, state=tk.DISABLED, height=180)
         self.log_text.pack(fill=tk.BOTH, expand=True)
 
     def log_message(self, text):
@@ -177,7 +199,10 @@ class MarkdownExtractorApp:
     def handle_root_drop(self, event):
         path = event.data.strip('{}')
         if os.path.isdir(path):
-            self.root_var.set(os.path.normpath(path))
+            norm_path = os.path.normpath(path)
+            self.root_var.set(norm_path)
+            self.save_history(norm_path)
+            self.root_combo.configure(values=list(self.history.keys()))
         else:
             self.log_message("Error: Dropped item is not a directory.")
 
@@ -185,18 +210,12 @@ class MarkdownExtractorApp:
         path = event.data.strip('{}')
         if os.path.isfile(path):
             self.md_var.set(os.path.normpath(path))
-            # Clear the text input to avoid confusion about which source is being used
             self.text_input.delete("1.0", tk.END)
-
-            if self.root_var.get():
-                self.start_extraction()
-            else:
-                self.log_message("Please set a Project Root before applying.")
+            self.log_message(f"Source file loaded: {os.path.basename(path)}")
         else:
             self.log_message("Error: Dropped item is not a file.")
 
     def handle_paste_event(self, event):
-        # Allow the default paste to finish, then process the text slightly after
         self.root.after(50, self.clean_textbox_content)
 
     def clean_textbox_content(self):
@@ -207,15 +226,16 @@ class MarkdownExtractorApp:
 
             self.text_input.delete("1.0", tk.END)
             self.text_input.insert("1.0", cleaned_content)
-
-            # Clear the file entry to avoid confusion
             self.md_var.set("")
 
     def browse_root(self):
         current_path = self.root_var.get()
         path = filedialog.askdirectory(initialdir=current_path if os.path.isdir(current_path) else None)
         if path:
-            self.root_var.set(os.path.normpath(path))
+            norm_path = os.path.normpath(path)
+            self.root_var.set(norm_path)
+            self.save_history(norm_path)
+            self.root_combo.configure(values=list(self.history.keys()))
 
     def open_root_folder(self):
         project_root = self.root_var.get()
@@ -230,7 +250,13 @@ class MarkdownExtractorApp:
             self.md_var.set(os.path.normpath(path))
             self.text_input.delete("1.0", tk.END)
 
+    def start_preview(self):
+        self._initiate_process(dry_run=True)
+
     def start_extraction(self):
+        self._initiate_process(dry_run=False)
+
+    def _initiate_process(self, dry_run):
         project_root = self.root_var.get()
         md_file = self.md_var.get()
         pasted_text = self.text_input.get("1.0", tk.END).strip()
@@ -248,10 +274,12 @@ class MarkdownExtractorApp:
         self.log_text.configure(state=tk.DISABLED)
 
         self.progress.start()
-        threading.Thread(target=self.execute_extraction, args=(project_root, md_file, pasted_text), daemon=True).start()
+        threading.Thread(target=self.execute_extraction, args=(project_root, md_file, pasted_text, dry_run), daemon=True).start()
 
-    def execute_extraction(self, project_root, md_file, pasted_text):
-        self.log_message("Starting file extraction...")
+    def execute_extraction(self, project_root, md_file, pasted_text, dry_run=False):
+        mode_text = "[PREVIEW]" if dry_run else "[APPLYING]"
+        self.log_message(f"{mode_text} Starting processing...")
+
         try:
             content = ""
             if pasted_text:
@@ -261,19 +289,15 @@ class MarkdownExtractorApp:
                 self.log_message(f"Using source file: {os.path.basename(md_file)}")
                 with open(md_file, 'r', encoding='utf-8') as f:
                     content = f.read()
-
-                # Process the file content just in case it wasn't pasted
                 content = process_text(content)
 
             lines = content.splitlines(True)
-
             current_file = None
             in_code_block = False
             code_content = []
             files_updated = 0
 
             for line in lines:
-                # Dynamically extract potential filenames
                 extracted = extract_filename(line)
                 if extracted and not in_code_block:
                     current_file = extracted
@@ -288,24 +312,31 @@ class MarkdownExtractorApp:
                         in_code_block = False
                         if current_file:
                             target_path = os.path.join(project_root, current_file)
-                            target_dir = os.path.dirname(target_path)
 
-                            if target_dir:
-                                os.makedirs(target_dir, exist_ok=True)
+                            if dry_run:
+                                self.log_message(f"Would update: {current_file}")
+                            else:
+                                target_dir = os.path.dirname(target_path)
+                                if target_dir:
+                                    os.makedirs(target_dir, exist_ok=True)
+                                with open(target_path, 'w', encoding='utf-8') as out_f:
+                                    out_f.write("".join(code_content))
+                                self.log_message(f"Updated: {current_file}")
 
-                            with open(target_path, 'w', encoding='utf-8') as out_f:
-                                out_f.write("".join(code_content))
-
-                            self.log_message(f"Updated: {current_file}")
                             files_updated += 1
                             current_file = None
                 elif in_code_block:
                     code_content.append(line)
 
-            self.log_message(f"\nExtraction completed successfully. {files_updated} files updated.")
+            result_msg = "Preview finished." if dry_run else "Extraction completed."
+            self.log_message(f"\n{result_msg} {files_updated} files identified.")
+
+            if not dry_run and files_updated > 0:
+                self.save_history(project_root)
+                self.root_combo.configure(values=list(self.history.keys()))
 
         except Exception as e:
-            self.log_message(f"Error during extraction: {e}")
+            self.log_message(f"Error during processing: {e}")
         finally:
             self.progress.stop()
 

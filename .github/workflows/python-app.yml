@@ -100,12 +100,22 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: pyinstaller --noconsole --onefile --collect-all customtkinter --collect-data tkinterdnd2 --name MarkdownExtractor-Linux markdown_extractor.py
 
+    - name: Extract Changelog Section
+      if: matrix.os == 'ubuntu-latest'
+      shell: bash
+      run: |
+        VERSION="${{ needs.check-version.outputs.version }}"
+        # Extract content between this version header and the next header
+        sed -e "1,/## \[$VERSION\]/d" -e '/## \[/,$d' CHANGELOG.md > release_notes.md
+        # Remove trailing empty lines
+        sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' release_notes.md
+
     - name: Upload Release Assets
       uses: softprops/action-gh-release@v2
       with:
         tag_name: "v${{ needs.check-version.outputs.version }}"
         name: "Version ${{ needs.check-version.outputs.version }}"
-        body_path: CHANGELOG.md
+        body_path: ${{ matrix.os == 'ubuntu-latest' && 'release_notes.md' || '' }}
         files: |
           dist/MarkdownExtractor-Windows.exe
           dist/MarkdownExtractor-Linux
