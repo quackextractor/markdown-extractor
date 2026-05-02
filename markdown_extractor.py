@@ -33,6 +33,51 @@ def process_text(content):
     return content.rstrip()
 
 
+def extract_filename(line):
+    """
+    Dynamically extracts a valid filepath from a text line containing
+    different markdown structures and header levels.
+    """
+    line = line.strip()
+    if not line:
+        return None
+
+    # Pattern 1: Explicit boundary with dashes or equals (e.g., ----- filename -----)
+    m1 = re.match(r'^[-=]{2,}\s*(.+?)\s*[-=]{2,}$', line)
+    if m1:
+        return m1.group(1).strip()
+
+    # Strip standard markdown citations if they survived the main text processor
+    line = re.sub(r'\[(?:cite_start|cite_end|cite:[^\]]*|source:[^\]]*)\]', '', line).strip()
+
+    # Strip markdown headers, lists, blockquotes, and formatting (bold/italic/code)
+    clean_line = re.sub(r'^([#>\-\*\+]+|\d+\.)\s*', '', line)
+    clean_line = re.sub(r'[`*]', '', clean_line).strip()
+
+    if not clean_line:
+        return None
+
+    # Ignore purely numeric, date, or version strings
+    if re.match(r'^[\d\.\-\[\] ]+$', clean_line):
+        return None
+
+    # Conditions for a valid file path
+    has_ext = bool(re.search(r'\.[a-zA-Z0-9]+$', clean_line))
+    is_path_like = '/' in clean_line or '\\' in clean_line
+    is_dotfile = clean_line.startswith('.')
+
+    special_files = {'Dockerfile', 'Makefile', 'Gemfile', 'Vagrantfile'}
+    is_special = clean_line.split('/')[-1] in special_files or clean_line.split('\\')[-1] in special_files
+
+    if has_ext or is_path_like or is_dotfile or is_special:
+        # Reject if it has spaces to prevent capturing sentences with slashes or sentence-ending periods
+        if ' ' in clean_line:
+            return None
+        return clean_line
+
+    return None
+
+
 def open_folder_in_explorer(path):
     """Opens the specified path in the default OS file manager."""
     if not path or not os.path.isdir(path):
@@ -228,9 +273,10 @@ class MarkdownExtractorApp:
             files_updated = 0
 
             for line in lines:
-                header_match = re.match(r'^###\s+`?([^`\n]+)`?', line)
-                if header_match and not in_code_block:
-                    current_file = header_match.group(1).strip()
+                # Dynamically extract potential filenames
+                extracted = extract_filename(line)
+                if extracted and not in_code_block:
+                    current_file = extracted
                     continue
 
                 if line.strip().startswith('```'):

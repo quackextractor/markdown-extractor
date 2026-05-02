@@ -1,7 +1,7 @@
 # Markdown Code Extractor
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-1.2.0-blue.svg)](https://github.com/quackextractor/markdown-extractor)
+[![Version](https://img.shields.io/badge/version-1.3.0-blue.svg)](https://github.com/quackextractor/markdown-extractor)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 
 A powerful and user-friendly utility to instantly extract code blocks from Markdown files and write them directly to your project structure.
