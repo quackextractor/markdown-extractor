@@ -48,14 +48,17 @@ def extract_filename(line):
     if m1:
         return m1.group(1).strip()
 
-    # Strip standard markdown citations if they survived the main text processor
+    # Strip standard markdown citations
     line = re.sub(r'\[(?:cite_start|cite_end|cite:[^\]]*|source:[^\]]*)\]', '', line).strip()
 
-    # Strip markdown headers, lists, blockquotes, and formatting (bold/italic/code)
+    # Strip markdown headers, lists, blockquotes, and formatting
     clean_line = re.sub(r'^([#>\-\*\+]+|\d+\.)\s*', '', line)
     clean_line = re.sub(r'[`*]', '', clean_line).strip()
 
     if not clean_line:
+        return None
+
+    if any(char in clean_line for char in '()<>{}[]=";'):
         return None
 
     # Ignore purely numeric, date, or version strings
@@ -71,7 +74,7 @@ def extract_filename(line):
     is_special = clean_line.split('/')[-1] in special_files or clean_line.split('\\')[-1] in special_files
 
     if has_ext or is_path_like or is_dotfile or is_special:
-        # Reject if it has spaces to prevent capturing sentences with slashes or sentence-ending periods
+        # Reject if it has spaces to prevent capturing full sentences
         if ' ' in clean_line:
             return None
         return clean_line
@@ -293,14 +296,22 @@ class MarkdownExtractorApp:
 
             lines = content.splitlines(True)
             current_file = None
+            file_locked = False  # Prevents text lines from overwriting header-found filenames
             in_code_block = False
             code_content = []
             files_updated = 0
 
             for line in lines:
+                is_header = line.strip().startswith('#')
                 extracted = extract_filename(line)
+
+                # If we find a path in plain text, we only use it if no header-based path is pending.
                 if extracted and not in_code_block:
-                    current_file = extracted
+                    if is_header:
+                        current_file = extracted
+                        file_locked = True
+                    elif not file_locked:
+                        current_file = extracted
                     continue
 
                 if line.strip().startswith('```'):
@@ -325,6 +336,7 @@ class MarkdownExtractorApp:
 
                             files_updated += 1
                             current_file = None
+                            file_locked = False  # Reset lock after processing the block
                 elif in_code_block:
                     code_content.append(line)
 
