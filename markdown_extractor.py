@@ -19,15 +19,13 @@ def process_text(content):
     and automatically repairs common markdown structural errors
     while preserving code indentation.
     """
-    cite_pat = r'\n[ \t]*(\[(?:cite_start|cite_end|cite:|source:)[^\]]*\])'
-    content = re.sub(cite_pat, r' \1', content)
-    content = re.sub(cite_pat, r' \1', content)
+    cite_pat = r'([^\n\r])[ \t]*\r?\n[ \t]*(\[(?:cite_start|cite_end|cite:|source:)[^\]]*\])'
+    content = re.sub(cite_pat, r'\1 \2', content)
+    content = re.sub(cite_pat, r'\1 \2', content)
 
     pattern = r'\[(?:cite_start|cite_end|cite:[^\]]*|source:[^\]]*)\]'
     content = re.sub(pattern, '', content)
 
-    content = re.sub(r'\*\s*\n\s*\*\*', '* **', content)
-    content = re.sub(r'(?<=:)\s*\*\s*\*\*', '\n  * **', content)
     content = re.sub(r'\n{3,}', '\n\n', content)
 
     content = re.sub(r'[ \t]+$', '', content, flags=re.MULTILINE)

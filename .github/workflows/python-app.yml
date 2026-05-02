@@ -105,6 +105,7 @@ jobs:
       with:
         tag_name: "v${{ needs.check-version.outputs.version }}"
         name: "Version ${{ needs.check-version.outputs.version }}"
+        body_path: CHANGELOG.md
         files: |
           dist/MarkdownExtractor-Windows.exe
           dist/MarkdownExtractor-Linux
