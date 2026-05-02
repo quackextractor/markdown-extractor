@@ -51,13 +51,22 @@ def extract_filename(line):
     # Strip standard markdown citations
     line = re.sub(r'\[(?:cite_start|cite_end|cite:[^\]]*|source:[^\]]*)\]', '', line).strip()
 
-    # Strip markdown headers, lists, blockquotes, and formatting
-    clean_line = re.sub(r'^([#>\-\*\+]+|\d+\.)\s*', '', line)
+    # 1. Strip markdown headers and blockquotes
+    clean_line = re.sub(r'^[#>\-\*\+\s]+', '', line)
+
+    # 2. Strip numbered list prefixes (e.g., "1. ")
+    clean_line = re.sub(r'^\d+\.\s*', '', clean_line)
+
+    # 3. Strip trailing parenthetical notes (e.g., "(New File)", "(Updated)")
+    clean_line = re.sub(r'\s*\(.*?\)$', '', clean_line)
+
+    # 4. Strip formatting backticks and bold asterisks
     clean_line = re.sub(r'[`*]', '', clean_line).strip()
 
     if not clean_line:
         return None
 
+    # Reject if there are remaining invalid characters
     if any(char in clean_line for char in '()<>{}[]=";'):
         return None
 
@@ -74,7 +83,7 @@ def extract_filename(line):
     is_special = clean_line.split('/')[-1] in special_files or clean_line.split('\\')[-1] in special_files
 
     if has_ext or is_path_like or is_dotfile or is_special:
-        # Reject if it has spaces to prevent capturing full sentences
+        # Reject if it still has spaces to prevent capturing full sentences
         if ' ' in clean_line:
             return None
         return clean_line
