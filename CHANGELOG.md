@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-05-02
+### Fixed
+* **Complex Header Parsing**: Updated the `extract_filename` regex logic to successfully isolate filepaths from headers containing numbered lists and trailing metadata (e.g., parsing `config.yaml` from `### 1. config.yaml (New File)`).
+
 ## [1.4.0] - 2026-05-02
 ### Added
 *   **Dry Run Preview**: Added a "Preview" button that logs intended file changes without modifying any local files.
