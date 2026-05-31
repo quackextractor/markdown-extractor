@@ -66,8 +66,9 @@ def extract_filename(line):
     if not clean_line:
         return None
 
-    # Reject if there are remaining invalid characters
-    if any(char in clean_line for char in '()<>{}[]=";'):
+    # Reject if there are remaining invalid characters – BUT allow square brackets
+    # Remove '[]' from the blacklist so Next.js dynamic routes are accepted
+    if any(char in clean_line for char in '()<>{}=";'):
         return None
 
     # Ignore purely numeric, date, or version strings
